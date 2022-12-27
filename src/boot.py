@@ -1,6 +1,6 @@
 # boot.py - - runs on boot-up
 
-from utime import sleep
+from machine import sleep
 import machine
 from config import (
     WIFI_SSID,
