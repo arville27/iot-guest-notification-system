@@ -11,14 +11,14 @@ from config import (
 )
 
 
-def do_connect():
+def do_connect(wifi_ssid: str, wifi_psk: str):
     import network
 
     wlan = network.WLAN(network.STA_IF)
     if not wlan.isconnected():
         print("Connecting to network", end="")
         wlan.active(True)
-        wlan.connect(WIFI_SSID, WIFI_PASSWORD)
+        wlan.connect(wifi_ssid, wifi_psk)
         while not wlan.isconnected():
             sleep(1000)
             print(".", end="")
@@ -27,12 +27,12 @@ def do_connect():
     print("Connected:", wlan.ifconfig())
 
 
-def connect_and_subscribe():
+def connect_and_subscribe(hostname: str, port: int, client_id: str):
     from umqtt.simple import MQTTClient
 
-    client = MQTTClient(BROKER_CLIENT_ID, BROKER_HOST, BROKER_PORT)
+    client = MQTTClient(client_id, hostname, port)
     client.connect()
-    print(f"Connected to {BROKER_HOST} MQTT broker")
+    print(f"Connected to {hostname} MQTT broker")
     return client
 
 
@@ -42,8 +42,10 @@ def restart_and_reconnect():
     machine.reset()
 
 
-do_connect()
+do_connect(WIFI_SSID, WIFI_PASSWORD)
 try:
-    client = connect_and_subscribe()
+    client = connect_and_subscribe(
+        hostname=BROKER_HOST, port=BROKER_PORT, client_id=BROKER_CLIENT_ID
+    )
 except OSError as e:
     restart_and_reconnect()
