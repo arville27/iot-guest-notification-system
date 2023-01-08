@@ -1,30 +1,26 @@
 # main.py
 
 import urequests as requests
-from boot import client
-from config import BROKER_TOPIC_PUB, BROKER_TOPIC_SUB, LINE_ACCESS_TOKEN, LINE_GROUP_ID
-from lib.i2c_lcd import I2cLcd
-from machine import sleep, Pin, I2C
-
-# I2C LCD display config
-I2C_ADDR = 0x27
-TOTAL_ROWS = 4
-TOTAL_COLUMNS = 20
-
-i2c = I2C(scl=Pin(5), sda=Pin(4), freq=10000)  # initializing the I2C method for ESP8266
-lcd = I2cLcd(i2c, I2C_ADDR, TOTAL_ROWS, TOTAL_COLUMNS)
-ir = Pin(13, Pin.IN)  # D7 (E18-D80NK, blue-GND, brown-VCC, black-OUT)
-builtin_led = Pin(2, Pin.OUT)  # D4 (built in LED)
-
-# IR sensor config
-REQUIRED_DETECTION_TIME = 3  # in seconds
-HARD_LIMIT_TIME = REQUIRED_DETECTION_TIME * 10 + 5
-
-# Helper variable
-counter = 0
-right_to_send = True
-
-builtin_led.value(1)
+from boot import (
+    lcd,
+    ir,
+    builtin_led,
+    do_connect,
+    restart_and_reconnect,
+    connect_and_subscribe,
+)
+from config import (
+    BROKER_TOPIC_PUB,
+    BROKER_TOPIC_SUB,
+    LINE_ACCESS_TOKEN,
+    LINE_GROUP_ID,
+    WIFI_PASSWORD,
+    WIFI_SSID,
+    BROKER_CLIENT_ID,
+    BROKER_HOST,
+    BROKER_PORT,
+)
+from machine import sleep
 
 
 def send_message():
@@ -60,13 +56,42 @@ def on_message_callback(topic, msg):
     lcd.putstr(msg.decode())
 
 
+# Execution start from here
+
+# IR sensor config
+REQUIRED_DETECTION_TIME = 3  # in seconds
+HARD_LIMIT_TIME = REQUIRED_DETECTION_TIME * 10 + 5
+
+# Helper variable
+counter = 0
+right_to_send = True
+
+builtin_led.value(1)
+
+lcd.clear()
+do_connect(WIFI_SSID, WIFI_PASSWORD)
+try:
+    client = connect_and_subscribe(
+        hostname=BROKER_HOST, port=BROKER_PORT, client_id=BROKER_CLIENT_ID
+    )
+except OSError as e:
+    restart_and_reconnect()
+
 client.set_callback(on_message_callback)
 client.subscribe(BROKER_TOPIC_SUB)
 print(f"MQTT client subscribing to {BROKER_TOPIC_SUB.decode()}")
 
+failed_fetch_counter = 0
 while True:
     sleep(100)
-    client.check_msg()
+    try:
+        client.check_msg()
+    except:
+        if failed_fetch_counter >= 50:
+            restart_and_reconnect()
+        failed_fetch_counter += 1
+        print("Cannot fetch message from broker")
+
     if ir.value() == 1:
         counter = HARD_LIMIT_TIME if counter >= HARD_LIMIT_TIME else counter + 1
     else:

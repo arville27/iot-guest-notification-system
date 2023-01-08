@@ -3,23 +3,16 @@
 from machine import Pin, sleep, I2C
 from lib.i2c_lcd import I2cLcd
 import machine
-from config import (
-    WIFI_SSID,
-    WIFI_PASSWORD,
-    BROKER_CLIENT_ID,
-    BROKER_HOST,
-    BROKER_PORT,
-)
 
 # I2C LCD display config
 I2C_ADDR = 0x27
 TOTAL_ROWS = 4
 TOTAL_COLUMNS = 20
 
-# GPIO Pin definition
-# SCL = D1, SDA = D2
 i2c = I2C(scl=Pin(5), sda=Pin(4), freq=10000)  # initializing the I2C method for ESP8266
 lcd = I2cLcd(i2c, I2C_ADDR, TOTAL_ROWS, TOTAL_COLUMNS)
+ir = Pin(13, Pin.IN)  # D7 (E18-D80NK, blue-GND, brown-VCC, black-OUT)
+builtin_led = Pin(2, Pin.OUT)  # D4 (built in LED)
 
 
 def do_connect(wifi_ssid: str, wifi_psk: str):
@@ -27,7 +20,7 @@ def do_connect(wifi_ssid: str, wifi_psk: str):
 
     wlan = network.WLAN(network.STA_IF)
     if not wlan.isconnected():
-        lcd_message = f"Connecting to WIFI  SSID: {WIFI_SSID}"
+        lcd_message = f"Connecting to WIFI  SSID: {wifi_ssid}"
         lcd.putstr(lcd_message)
         print("Connecting to network", end="")
         wlan.active(True)
@@ -61,13 +54,3 @@ def restart_and_reconnect():
     print("Failed to connect to MQTT broker. Reconnecting...")
     sleep(1000)
     machine.reset()
-
-
-lcd.clear()
-do_connect(WIFI_SSID, WIFI_PASSWORD)
-try:
-    client = connect_and_subscribe(
-        hostname=BROKER_HOST, port=BROKER_PORT, client_id=BROKER_CLIENT_ID
-    )
-except OSError as e:
-    restart_and_reconnect()
