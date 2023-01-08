@@ -39,7 +39,9 @@ def send_message():
 
     BODY = {
         "to": LINE_GROUP_ID,
-        "messages": [{"type": "text", "text": "Detect an object"}],
+        "messages": [
+            {"type": "text", "text": "You have a guest waiting for you at the door."}
+        ],
     }
 
     res = requests.post(url=ENDPOINT, json=BODY, headers=HEADERS)
@@ -50,9 +52,9 @@ def send_message():
 
 
 def action():
-    print("Detect an object")
+    print("Visitor detected")
     send_message()
-    client.publish(BROKER_TOPIC_PUB, b"Detect an object")
+    client.publish(BROKER_TOPIC_PUB, b"visitor count=1")
 
 
 def on_message_callback(topic, msg):
